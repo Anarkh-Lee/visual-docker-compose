@@ -54,12 +54,17 @@ export function useDockerCompose() {
       }
 
       if (config.ports && config.ports.length > 0) {
-        service.ports = config.ports.filter(p => p.trim() !== '');
+        service.ports = config.ports.filter(p => typeof p === 'string' && p.trim() !== '');
       }
 
       if (config.environment && Object.keys(config.environment).length > 0) {
         const filteredEnv = Object.fromEntries(
-          Object.entries(config.environment).filter(([k, v]) => k.trim() !== '' && v.trim() !== '')
+          Object.entries(config.environment).filter(([k, v]) => {
+            const keyValid = typeof k === 'string' && k.trim() !== '';
+            const valueValid = v !== undefined && v !== null && 
+              (typeof v === 'string' ? v.trim() !== '' : true);
+            return keyValid && valueValid;
+          }).map(([k, v]) => [k, typeof v === 'string' ? v : String(v)])
         );
         if (Object.keys(filteredEnv).length > 0) {
           service.environment = filteredEnv;
@@ -67,7 +72,7 @@ export function useDockerCompose() {
       }
 
       if (config.volumes && config.volumes.length > 0) {
-        const filteredVolumes = config.volumes.filter(v => v.trim() !== '');
+        const filteredVolumes = config.volumes.filter(v => typeof v === 'string' && v.trim() !== '');
         if (filteredVolumes.length > 0) {
           service.volumes = filteredVolumes;
         }
