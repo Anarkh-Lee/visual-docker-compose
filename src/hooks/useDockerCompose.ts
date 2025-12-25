@@ -202,13 +202,95 @@ export function useDockerCompose() {
       const nodes: Node<ServiceConfig>[] = [];
       const edges: Edge[] = [];
       const serviceNameToId: Record<string, string> = {};
+      const serviceNameToIndex: Record<string, number> = {};
 
       // Collect all network names used
       const networksUsed = new Set<string>();
 
-      // Calculate grid positions
       const serviceNames = Object.keys(parsed.services);
-      const cols = Math.ceil(Math.sqrt(serviceNames.length));
+      
+      // Build dependency graph for topological sorting
+      const dependencyGraph: Record<string, string[]> = {};
+      const reverseDeps: Record<string, string[]> = {};
+      
+      serviceNames.forEach((serviceName, index) => {
+        serviceNameToIndex[serviceName] = index;
+        dependencyGraph[serviceName] = [];
+        reverseDeps[serviceName] = [];
+      });
+      
+      // Populate dependency relationships
+      serviceNames.forEach((serviceName) => {
+        const service = parsed.services[serviceName];
+        let deps: string[] = [];
+        if (service.depends_on) {
+          if (Array.isArray(service.depends_on)) {
+            deps = service.depends_on;
+          } else {
+            deps = Object.keys(service.depends_on);
+          }
+        }
+        deps.forEach((depName) => {
+          if (dependencyGraph[depName] !== undefined) {
+            dependencyGraph[serviceName].push(depName);
+            reverseDeps[depName].push(serviceName);
+          }
+        });
+      });
+      
+      // Compute levels using topological sort (Kahn's algorithm)
+      // Level 0 = services with no dependencies (like databases)
+      // Higher levels depend on lower levels
+      const levels: Record<string, number> = {};
+      const inDegree: Record<string, number> = {};
+      
+      serviceNames.forEach((name) => {
+        inDegree[name] = dependencyGraph[name].length;
+      });
+      
+      // Find all nodes with no dependencies (level 0)
+      let currentLevel = 0;
+      let queue = serviceNames.filter((name) => inDegree[name] === 0);
+      
+      while (queue.length > 0) {
+        const nextQueue: string[] = [];
+        queue.forEach((name) => {
+          levels[name] = currentLevel;
+          // Process services that depend on this one
+          reverseDeps[name].forEach((dependent) => {
+            inDegree[dependent]--;
+            if (inDegree[dependent] === 0) {
+              nextQueue.push(dependent);
+            }
+          });
+        });
+        queue = nextQueue;
+        currentLevel++;
+      }
+      
+      // Handle any remaining nodes (circular dependencies) - assign to last level
+      serviceNames.forEach((name) => {
+        if (levels[name] === undefined) {
+          levels[name] = currentLevel;
+        }
+      });
+      
+      // Group services by level
+      const levelGroups: Record<number, string[]> = {};
+      serviceNames.forEach((name) => {
+        const level = levels[name];
+        if (!levelGroups[level]) {
+          levelGroups[level] = [];
+        }
+        levelGroups[level].push(name);
+      });
+      
+      // Calculate positions - bottom to top layout (level 0 at bottom)
+      const maxLevel = Math.max(...Object.values(levels));
+      const nodeWidth = 220;
+      const nodeHeight = 120;
+      const horizontalGap = 80;
+      const verticalGap = 100;
       
       serviceNames.forEach((serviceName, index) => {
         const service = parsed.services[serviceName];
@@ -222,7 +304,6 @@ export function useDockerCompose() {
         if (service.image) {
           imageName = service.image;
         } else if (service.build) {
-          // Store the build config and create a display name
           buildConfig = service.build;
           if (typeof service.build === 'string') {
             imageName = `build:${service.build}`;
@@ -289,11 +370,16 @@ export function useDockerCompose() {
           }
         }
 
-        // Grid layout
-        const col = index % cols;
-        const row = Math.floor(index / cols);
-        const x = 150 + col * 250;
-        const y = 100 + row * 180;
+        // Calculate position based on level
+        const level = levels[serviceName];
+        const nodesAtLevel = levelGroups[level];
+        const indexInLevel = nodesAtLevel.indexOf(serviceName);
+        const totalWidthAtLevel = nodesAtLevel.length * nodeWidth + (nodesAtLevel.length - 1) * horizontalGap;
+        const startX = 400 - totalWidthAtLevel / 2;
+        
+        // Y position: level 0 at bottom, higher levels above
+        const x = startX + indexInLevel * (nodeWidth + horizontalGap);
+        const y = 100 + (maxLevel - level) * (nodeHeight + verticalGap);
 
         const node: Node<ServiceConfig> = {
           id: nodeId,
@@ -321,7 +407,7 @@ export function useDockerCompose() {
         nodes.push(node);
       });
 
-      // Create edges from depends_on
+      // Create edges from depends_on (source depends on target, so arrow from source to target)
       serviceNames.forEach((serviceName) => {
         const service = parsed.services[serviceName];
         const sourceId = serviceNameToId[serviceName];
