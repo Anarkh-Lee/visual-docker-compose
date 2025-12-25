@@ -36,9 +36,16 @@ Cloudflare Pages 提供免费的全球 CDN、自动 HTTPS 和无限带宽。
    | 配置项 | 值 |
    |--------|-----|
    | 框架预设 | `Vite` |
-   | 构建命令 | `npm run build` |
+   | 构建命令 | `bun install && npm run build` |
    | 构建输出目录 | `dist` |
    | Node.js 版本 | `18` 或更高 |
+
+   > ⚠️ **重要**: 如果使用 Bun 作为包管理器，需要在 **Environment variables** 中设置：
+   > - 变量名：`SKIP_DEPENDENCY_INSTALL`，值：`true`
+   > 
+   > 然后在构建命令中添加安装步骤：`bun install && npm run build`
+   > 
+   > 或者在 **Settings → Builds & deployments** 中将安装命令从 `bun install --frozen-lockfile` 改为 `bun install`
 
 5. **点击 "Save and Deploy"**
 
@@ -313,6 +320,17 @@ VITE_API_URL=https://api.example.com npm run build
 ```bash
 npm run build
 ```
+
+### Q: Cloudflare Pages 报错 "lockfile had changes, but lockfile is frozen"？
+
+这是 Bun lockfile 版本不兼容导致的。解决方法：
+
+1. 进入项目 **Settings → Builds & deployments**
+2. 找到 **Build configurations** 部分
+3. 将安装命令从 `bun install --frozen-lockfile` 改为 `bun install`
+4. 保存并重新部署
+
+或者设置环境变量 `SKIP_DEPENDENCY_INSTALL=true`，然后将构建命令改为 `bun install && npm run build`
 
 ---
 
