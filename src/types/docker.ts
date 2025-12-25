@@ -1,13 +1,37 @@
+export interface HealthcheckConfig {
+  test: string[];
+  interval?: string;
+  timeout?: string;
+  retries?: number;
+  start_period?: string;
+}
+
+export interface DependsOnConfig {
+  condition?: 'service_started' | 'service_healthy' | 'service_completed_successfully';
+}
+
+export interface BuildConfig {
+  context?: string;
+  dockerfile?: string;
+  args?: Record<string, string>;
+}
+
 export interface ServiceConfig {
   id: string;
   type: ServiceType;
   name: string;
   containerName: string;
   image: string;
+  build?: string | BuildConfig;
   ports: string[];
   environment: Record<string, string>;
   volumes: string[];
   dependsOn: string[];
+  dependsOnConditions?: Record<string, DependsOnConfig>;
+  command?: string | string[];
+  healthcheck?: HealthcheckConfig;
+  networks?: string[];
+  restart?: string;
 }
 
 export type ServiceType = 

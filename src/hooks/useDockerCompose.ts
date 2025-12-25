@@ -1,22 +1,26 @@
 import { useCallback } from 'react';
 import { Node, Edge } from 'reactflow';
 import yaml from 'js-yaml';
-import { ServiceConfig, ServiceType, SERVICE_TEMPLATES } from '@/types/docker';
+import { ServiceConfig, ServiceType, SERVICE_TEMPLATES, BuildConfig, HealthcheckConfig, DependsOnConfig } from '@/types/docker';
 
 interface DockerComposeService {
-  image: string;
+  image?: string;
+  build?: string | BuildConfig;
   container_name?: string;
   ports?: string[];
-  environment?: Record<string, string> | string[];
+  environment?: Record<string, string | number | boolean> | string[];
   volumes?: string[];
-  depends_on?: string[] | Record<string, { condition?: string }>;
+  depends_on?: string[] | Record<string, DependsOnConfig>;
   restart?: string;
+  command?: string | string[];
+  healthcheck?: HealthcheckConfig;
+  networks?: string[];
 }
 
 interface DockerCompose {
   version?: string;
   services: Record<string, DockerComposeService>;
-  networks?: Record<string, object>;
+  networks?: Record<string, { driver?: string } | null>;
 }
 
 export function useDockerCompose() {
@@ -26,37 +30,67 @@ export function useDockerCompose() {
     }
 
     const services: Record<string, DockerComposeService> = {};
+    const usedNetworks = new Set<string>();
+
+    // Build a map from node ID to service name for dependency resolution
+    const nodeIdToServiceName: Record<string, string> = {};
+    nodes.forEach((node) => {
+      const config = node.data as ServiceConfig;
+      if (config) {
+        // Use the original service name (config.name) for service discovery, not container_name
+        nodeIdToServiceName[node.id] = config.name || node.id;
+      }
+    });
 
     nodes.forEach((node) => {
       const config = node.data as ServiceConfig;
       if (!config) return;
 
-      const serviceName = config.containerName || config.name || node.id;
+      // IMPORTANT: Use config.name as service name for Docker service discovery
+      // container_name is separate and only for Docker container naming
+      const serviceName = config.name || node.id;
       
+      // Find dependencies using edges
       const dependencies = edges
         .filter((edge) => edge.source === node.id)
-        .map((edge) => {
-          const targetNode = nodes.find((n) => n.id === edge.target);
-          if (targetNode?.data) {
-            const targetConfig = targetNode.data as ServiceConfig;
-            return targetConfig.containerName || targetConfig.name || edge.target;
-          }
-          return edge.target;
-        });
+        .map((edge) => nodeIdToServiceName[edge.target])
+        .filter(Boolean);
 
-      const service: DockerComposeService = {
-        image: config.image,
-        restart: 'unless-stopped',
-      };
+      const service: DockerComposeService = {};
 
-      if (config.containerName) {
+      // Handle build vs image - NEVER use "image: build:xxx" syntax
+      if (config.build) {
+        // Use build configuration
+        if (typeof config.build === 'string') {
+          service.build = { context: config.build };
+        } else {
+          service.build = config.build;
+        }
+      } else if (config.image && config.image.startsWith('build:')) {
+        // Parse legacy "build:./path" format and convert to proper build syntax
+        const buildPath = config.image.replace('build:', '');
+        service.build = { context: buildPath };
+      } else if (config.image) {
+        service.image = config.image;
+      }
+
+      // Restart policy
+      service.restart = config.restart || 'always';
+
+      // Container name (optional, separate from service name)
+      if (config.containerName && config.containerName !== serviceName) {
         service.container_name = config.containerName;
       }
 
+      // Ports
       if (config.ports && config.ports.length > 0) {
-        service.ports = config.ports.filter(p => typeof p === 'string' && p.trim() !== '');
+        const filteredPorts = config.ports.filter(p => typeof p === 'string' && p.trim() !== '');
+        if (filteredPorts.length > 0) {
+          service.ports = filteredPorts;
+        }
       }
 
+      // Environment variables
       if (config.environment && Object.keys(config.environment).length > 0) {
         const filteredEnv = Object.fromEntries(
           Object.entries(config.environment).filter(([k, v]) => {
@@ -71,6 +105,7 @@ export function useDockerCompose() {
         }
       }
 
+      // Volumes
       if (config.volumes && config.volumes.length > 0) {
         const filteredVolumes = config.volumes.filter(v => typeof v === 'string' && v.trim() !== '');
         if (filteredVolumes.length > 0) {
@@ -78,8 +113,52 @@ export function useDockerCompose() {
         }
       }
 
-      if (dependencies.length > 0) {
-        service.depends_on = dependencies;
+      // Command
+      if (config.command) {
+        service.command = config.command;
+      }
+
+      // Healthcheck
+      if (config.healthcheck) {
+        service.healthcheck = config.healthcheck;
+      }
+
+      // Networks
+      if (config.networks && config.networks.length > 0) {
+        service.networks = config.networks;
+        config.networks.forEach(n => usedNetworks.add(n));
+      }
+
+      // Dependencies with conditions
+      if (dependencies.length > 0 || (config.dependsOnConditions && Object.keys(config.dependsOnConditions).length > 0)) {
+        const hasConditions = config.dependsOnConditions && Object.keys(config.dependsOnConditions).length > 0;
+        
+        if (hasConditions) {
+          // Use object format with conditions
+          const dependsOnObj: Record<string, DependsOnConfig> = {};
+          
+          dependencies.forEach(dep => {
+            if (config.dependsOnConditions && config.dependsOnConditions[dep]) {
+              dependsOnObj[dep] = config.dependsOnConditions[dep];
+            } else {
+              dependsOnObj[dep] = { condition: 'service_started' };
+            }
+          });
+          
+          // Also include any conditions that might not be in dependencies
+          if (config.dependsOnConditions) {
+            Object.entries(config.dependsOnConditions).forEach(([dep, cond]) => {
+              if (!dependsOnObj[dep]) {
+                dependsOnObj[dep] = cond;
+              }
+            });
+          }
+          
+          service.depends_on = dependsOnObj;
+        } else {
+          // Simple array format
+          service.depends_on = dependencies;
+        }
       }
 
       services[serviceName] = service;
@@ -90,10 +169,12 @@ export function useDockerCompose() {
       services,
     };
 
-    if (Object.keys(services).length > 0) {
-      compose.networks = {
-        app_network: { driver: 'bridge' },
-      };
+    // Add networks if any service uses them
+    if (usedNetworks.size > 0) {
+      compose.networks = {};
+      usedNetworks.forEach(networkName => {
+        compose.networks![networkName] = { driver: 'bridge' };
+      });
     }
 
     try {
@@ -122,6 +203,9 @@ export function useDockerCompose() {
       const edges: Edge[] = [];
       const serviceNameToId: Record<string, string> = {};
 
+      // Collect all network names used
+      const networksUsed = new Set<string>();
+
       // Calculate grid positions
       const serviceNames = Object.keys(parsed.services);
       const cols = Math.ceil(Math.sqrt(serviceNames.length));
@@ -131,31 +215,77 @@ export function useDockerCompose() {
         const nodeId = `node_${index}`;
         serviceNameToId[serviceName] = nodeId;
 
-        // Try to detect service type from image name
-        const imageLower = (service.image || '').toLowerCase();
+        // Determine image name - support both 'image' and 'build' configurations
+        let imageName = '';
+        let buildConfig: string | BuildConfig | undefined;
+        
+        if (service.image) {
+          imageName = service.image;
+        } else if (service.build) {
+          // Store the build config and create a display name
+          buildConfig = service.build;
+          if (typeof service.build === 'string') {
+            imageName = `build:${service.build}`;
+          } else if (service.build.context) {
+            imageName = `build:${service.build.context}`;
+          } else {
+            imageName = 'build:./';
+          }
+        } else {
+          imageName = 'unknown';
+        }
+
+        // Try to detect service type from image name or service name
+        const imageLower = imageName.toLowerCase();
+        const serviceNameLower = serviceName.toLowerCase();
         let detectedType: ServiceType = 'spring';
         
         for (const template of SERVICE_TEMPLATES) {
           const templateImage = template.defaultImage.toLowerCase();
           const imageBase = templateImage.split(':')[0].split('/').pop() || '';
-          if (imageLower.includes(imageBase) || imageLower.includes(template.type)) {
+          if (imageLower.includes(imageBase) || imageLower.includes(template.type) ||
+              serviceNameLower.includes(imageBase) || serviceNameLower.includes(template.type)) {
             detectedType = template.type;
             break;
           }
         }
 
-        // Parse environment variables
-        let environment: Record<string, string> = {};
+        // Parse environment variables - convert all values to strings
+        const environment: Record<string, string> = {};
         if (service.environment) {
           if (Array.isArray(service.environment)) {
             service.environment.forEach((env) => {
-              const idx = env.indexOf('=');
-              if (idx !== -1) {
-                environment[env.substring(0, idx)] = env.substring(idx + 1);
+              if (typeof env === 'string') {
+                const idx = env.indexOf('=');
+                if (idx !== -1) {
+                  environment[env.substring(0, idx)] = env.substring(idx + 1);
+                }
               }
             });
           } else {
-            environment = service.environment;
+            Object.entries(service.environment).forEach(([key, value]) => {
+              environment[key] = String(value);
+            });
+          }
+        }
+
+        // Parse depends_on conditions
+        let dependsOnConditions: Record<string, DependsOnConfig> | undefined;
+        if (service.depends_on && !Array.isArray(service.depends_on)) {
+          dependsOnConditions = {};
+          Object.entries(service.depends_on).forEach(([depName, depConfig]) => {
+            if (depConfig && typeof depConfig === 'object' && depConfig.condition) {
+              dependsOnConditions![depName] = { condition: depConfig.condition };
+            }
+          });
+        }
+
+        // Parse networks
+        let networks: string[] | undefined;
+        if (service.networks) {
+          if (Array.isArray(service.networks)) {
+            networks = service.networks;
+            service.networks.forEach(n => networksUsed.add(n));
           }
         }
 
@@ -174,11 +304,17 @@ export function useDockerCompose() {
             type: detectedType,
             name: serviceName,
             containerName: service.container_name || serviceName,
-            image: service.image || 'unknown',
+            image: imageName,
+            build: buildConfig,
             ports: service.ports || [],
             environment,
             volumes: service.volumes || [],
             dependsOn: [],
+            dependsOnConditions,
+            command: service.command,
+            healthcheck: service.healthcheck as HealthcheckConfig | undefined,
+            networks,
+            restart: service.restart,
           },
         };
 
