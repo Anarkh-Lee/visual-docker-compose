@@ -8,9 +8,11 @@ interface YamlPreviewProps {
   yaml: string;
   onDownload: () => void;
   onCopy: () => Promise<boolean>;
+  onDownloadEnv?: () => void;
+  hasEnvVariables?: boolean;
 }
 
-export function YamlPreview({ yaml, onDownload, onCopy }: YamlPreviewProps) {
+export function YamlPreview({ yaml, onDownload, onCopy, onDownloadEnv, hasEnvVariables }: YamlPreviewProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
@@ -97,6 +99,24 @@ export function YamlPreview({ yaml, onDownload, onCopy }: YamlPreviewProps) {
             <Download className="w-3 h-3 mr-1" />
             下载 .yml
           </Button>
+
+          {hasEnvVariables && onDownloadEnv && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onDownloadEnv();
+                toast({
+                  title: '下载成功',
+                  description: '.env 文件已开始下载',
+                });
+              }}
+              className="h-8 text-xs"
+            >
+              <Download className="w-3 h-3 mr-1" />
+              下载 .env
+            </Button>
+          )}
         </div>
       </div>
       

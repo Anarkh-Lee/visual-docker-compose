@@ -13,9 +13,11 @@ import { PropertiesPanel } from '@/components/PropertiesPanel';
 import { YamlPreview } from '@/components/YamlPreview';
 import { ImportYamlDialog } from '@/components/ImportYamlDialog';
 import { NodeContextMenu } from '@/components/ContextMenu';
+import { EnvManager } from '@/components/EnvManager';
 import { useDockerCompose } from '@/hooks/useDockerCompose';
+import { useEnvVariables } from '@/hooks/useEnvVariables';
 import { ServiceConfig, ServiceType, SERVICE_TEMPLATES, ArchitectureTemplate, ARCHITECTURE_TEMPLATES } from '@/types/docker';
-import { Container, Github, Trash2, ChevronDown, Rocket, Bot, Search, Copy, Edit } from 'lucide-react';
+import { Container, Github, Trash2, ChevronDown, Rocket, Bot, Search, Copy, Edit, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -46,8 +48,18 @@ export default function Index() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [nodeMenu, setNodeMenu] = useState<NodeMenuState>({ node: null, x: 0, y: 0 });
+  const [envManagerOpen, setEnvManagerOpen] = useState(false);
 
   const { generateYaml, parseYaml, downloadYaml, copyToClipboard } = useDockerCompose();
+  const {
+    envVariables,
+    addVariable,
+    updateVariable,
+    removeVariable,
+    parseEnvText,
+    toEnvText,
+    downloadEnv,
+  } = useEnvVariables();
 
   const yaml = useMemo(() => generateYaml(nodes, edges), [nodes, edges, generateYaml]);
 
@@ -329,6 +341,17 @@ export default function Index() {
           {/* Import YAML */}
           <ImportYamlDialog onImport={handleImportYaml} />
 
+          {/* Env Manager */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => setEnvManagerOpen(true)}
+          >
+            <FileText className="w-4 h-4" />
+            环境变量 (.env)
+          </Button>
+
           <span className="text-xs text-muted-foreground px-2 py-1 rounded bg-secondary">
             {nodes.length} 个服务
           </span>
@@ -416,6 +439,8 @@ export default function Index() {
             yaml={yaml}
             onDownload={handleDownload}
             onCopy={handleCopy}
+            onDownloadEnv={downloadEnv}
+            hasEnvVariables={envVariables.filter(v => v.key.trim()).length > 0}
           />
         </div>
 
@@ -426,6 +451,19 @@ export default function Index() {
           onClose={handleClosePanel}
         />
       </div>
+
+      {/* Env Manager Drawer */}
+      <EnvManager
+        open={envManagerOpen}
+        onOpenChange={setEnvManagerOpen}
+        envVariables={envVariables}
+        onAddVariable={addVariable}
+        onUpdateVariable={updateVariable}
+        onRemoveVariable={removeVariable}
+        onParseEnvText={parseEnvText}
+        toEnvText={toEnvText}
+        onDownloadEnv={downloadEnv}
+      />
     </div>
   );
 }

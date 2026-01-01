@@ -6,8 +6,6 @@
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)
 
-**演示地址：**https://compose.anarkh.site
-
 ## ✨ 功能特性
 
 ### 🎨 可视化画布
@@ -41,8 +39,15 @@
 - **端口映射**：灵活配置服务端口
 - **依赖管理**：通过连线自动生成 `depends_on`
 
+### 🔐 全局环境变量 (.env) 管理器
+- **GUI 模式**：Key-Value 表格编辑，Key 自动大写，支持密文切换（眼睛图标隐藏敏感值）
+- **文本模式**：直接粘贴 `.env` 文件内容，自动解析为表格
+- **变量引用**：在服务配置中使用 `${VARIABLE_NAME}` 格式引用全局变量
+- **独立下载**：分别下载 `docker-compose.yml` 和 `.env` 文件
+
 ### 📥 导入导出
-- **导出 YAML**：一键复制生成的 docker-compose.yml
+- **导出 YAML**：一键复制或下载生成的 docker-compose.yml
+- **导出 .env**：下载全局环境变量配置文件
 - **导入 YAML**：粘贴现有配置，自动反向生成可视化节点
 
 ## 🚀 快速开始
@@ -99,6 +104,14 @@ npm run build
    ```
 4. 切换回表单模式自动解析
 
+### 使用全局环境变量管理器
+
+1. 点击顶部工具栏的 **"环境变量 (.env)"** 按钮
+2. 在弹出的抽屉中添加全局变量（如 `MYSQL_ROOT_PASSWORD=secret123`）
+3. 在服务节点的环境变量配置中，使用 `${MYSQL_ROOT_PASSWORD}` 格式引用变量
+4. 生成的 YAML 会保留变量引用格式
+5. 分别下载 `.yml` 和 `.env` 文件，放在同一目录下运行 `docker-compose up`
+
 ## 🛠️ 技术栈
 
 - **前端框架**：React 18 + TypeScript
@@ -118,9 +131,11 @@ src/
 │   ├── ServiceSidebar.tsx  # 左侧组件库
 │   ├── PropertiesPanel.tsx # 右侧属性面板
 │   ├── YamlPreview.tsx     # YAML 预览组件
+│   ├── EnvManager.tsx      # 全局环境变量管理器
 │   └── ImportYamlDialog.tsx# 导入对话框
 ├── hooks/
-│   └── useDockerCompose.ts # Docker Compose 生成逻辑
+│   ├── useDockerCompose.ts # Docker Compose 生成逻辑
+│   └── useEnvVariables.ts  # 环境变量管理逻辑
 ├── types/
 │   └── docker.ts           # 类型定义与服务模板
 └── pages/
