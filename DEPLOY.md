@@ -6,11 +6,118 @@
 
 ## 目录
 
-- [Cloudflare Pages（推荐）](#cloudflare-pages推荐)
+- [Docker 部署（推荐）](#docker-部署推荐)
+- [Cloudflare Pages](#cloudflare-pages)
 - [Vercel](#vercel)
 - [Netlify](#netlify)
 - [GitHub Pages](#github-pages)
 - [自托管 (Nginx)](#自托管-nginx)
+
+---
+
+## Docker 部署（推荐）
+
+使用 Docker 可以快速部署到任何支持容器的环境。
+
+### 📋 前置要求
+
+- Docker 20.10+
+- Docker Compose 2.0+（可选）
+
+### 🚀 方式一：Docker Compose（推荐）
+
+```bash
+# 克隆项目
+git clone <your-repo-url>
+cd docker-compose-builder
+
+# 一键启动
+docker-compose up -d
+
+# 查看运行状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f
+```
+
+服务启动后，访问 http://localhost:3000 即可使用。
+
+### 🚀 方式二：Docker 命令
+
+```bash
+# 构建镜像
+docker build -t docker-compose-builder:latest .
+
+# 运行容器
+docker run -d --name docker-compose-builder -p 3000:80 --restart unless-stopped docker-compose-builder:latest
+```
+
+### 🔧 端口配置
+
+默认使用 `3000` 端口，如需修改：
+
+**Docker Compose 方式**：编辑 `docker-compose.yml`
+```yaml
+ports:
+  - "8080:80"  # 改为 8080 端口
+```
+
+**Docker 命令方式**：
+```bash
+docker run -d -p 8080:80 docker-compose-builder:latest
+```
+
+### 📦 推送到镜像仓库
+
+```bash
+# Docker Hub
+docker tag docker-compose-builder:latest your-username/docker-compose-builder:latest
+docker push your-username/docker-compose-builder:latest
+
+# 阿里云容器镜像服务
+docker tag docker-compose-builder:latest registry.cn-hangzhou.aliyuncs.com/your-namespace/docker-compose-builder:latest
+docker push registry.cn-hangzhou.aliyuncs.com/your-namespace/docker-compose-builder:latest
+```
+
+### 🔄 更新部署
+
+```bash
+# Docker Compose 方式
+docker-compose up -d --build
+
+# Docker 命令方式
+docker stop docker-compose-builder
+docker rm docker-compose-builder
+docker build -t docker-compose-builder:latest .
+docker run -d --name docker-compose-builder -p 3000:80 --restart unless-stopped docker-compose-builder:latest
+```
+
+### 🛠 常用命令
+
+| 操作 | Docker Compose | Docker |
+|------|----------------|--------|
+| 启动服务 | `docker-compose up -d` | `docker start docker-compose-builder` |
+| 停止服务 | `docker-compose down` | `docker stop docker-compose-builder` |
+| 查看日志 | `docker-compose logs -f` | `docker logs -f docker-compose-builder` |
+| 重启服务 | `docker-compose restart` | `docker restart docker-compose-builder` |
+| 查看状态 | `docker-compose ps` | `docker ps` |
+
+### ❓ Docker 常见问题
+
+**端口被占用**
+```bash
+lsof -i :3000  # 查看端口占用
+# 然后使用其他端口
+```
+
+**构建失败**
+```bash
+docker builder prune  # 清理构建缓存
+docker-compose build --no-cache  # 重新构建
+```
+
+---
 
 ---
 

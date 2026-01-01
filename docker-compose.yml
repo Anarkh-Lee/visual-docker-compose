@@ -1,0 +1,15 @@
+services:
+  docker-compose-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: docker-compose-builder
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
