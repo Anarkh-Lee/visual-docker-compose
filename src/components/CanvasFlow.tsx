@@ -163,6 +163,7 @@ export function CanvasFlow({
               keycloak: 'hsl(0 0% 55%)', jenkins: 'hsl(0 60% 50%)', 'gitlab-runner': 'hsl(25 80% 55%)',
               minio: 'hsl(0 70% 55%)', mailhog: 'hsl(140 60% 50%)', portainer: 'hsl(190 70% 55%)',
               frontend: 'hsl(212 92% 67%)', microservice: 'hsl(240 50% 60%)',
+              k3s: 'hsl(210 80% 55%)', 'docker-dind': 'hsl(210 90% 50%)',
             };
             
             return colorMap[data.type] || 'hsl(215 20% 30%)';

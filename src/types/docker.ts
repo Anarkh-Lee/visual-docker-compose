@@ -32,6 +32,7 @@ export interface ServiceConfig {
   healthcheck?: HealthcheckConfig;
   networks?: string[];
   restart?: string;
+  privileged?: boolean;
 }
 
 export type ServiceType = 
@@ -42,7 +43,7 @@ export type ServiceType =
   | 'nacos' | 'sentinel' | 'gateway' | 'seata'
   | 'prometheus' | 'grafana' | 'elasticsearch' | 'kibana' | 'zipkin'
   | 'nginx' | 'traefik' | 'keycloak'
-  | 'jenkins' | 'gitlab-runner' | 'minio' | 'mailhog' | 'portainer'
+  | 'jenkins' | 'gitlab-runner' | 'minio' | 'mailhog' | 'portainer' | 'k3s' | 'docker-dind'
   | 'frontend' | 'microservice';
 
 export type ServiceCategory = 'runtimes' | 'databases' | 'ai' | 'messaging' | 'microservices' | 'observability' | 'security' | 'devtools';
@@ -57,6 +58,7 @@ export interface ServiceTemplate {
   defaultEnv: Record<string, string>;
   color: string;
   description?: string;
+  privileged?: boolean;
 }
 
 export interface CategoryInfo {
@@ -126,6 +128,8 @@ export const SERVICE_TEMPLATES: ServiceTemplate[] = [
   { type: 'minio', category: 'devtools', label: 'MinIO', icon: 'HardDrive', defaultImage: 'minio/minio', defaultPorts: ['9000:9000', '9001:9001'], defaultEnv: { MINIO_ROOT_USER: 'admin', MINIO_ROOT_PASSWORD: 'admin123' }, color: 'service-minio' },
   { type: 'mailhog', category: 'devtools', label: 'Mailhog', icon: 'Mail', defaultImage: 'mailhog/mailhog', defaultPorts: ['1025:1025', '8025:8025'], defaultEnv: {}, color: 'service-mailhog', description: '邮件测试神器' },
   { type: 'portainer', category: 'devtools', label: 'Portainer', icon: 'Box', defaultImage: 'portainer/portainer-ce', defaultPorts: ['9000:9000'], defaultEnv: {}, color: 'service-portainer' },
+  { type: 'k3s', category: 'devtools', label: 'K3s (Kubernetes)', icon: 'ShipWheel', defaultImage: 'rancher/k3s:latest', defaultPorts: ['6443:6443'], defaultEnv: { K3S_URL: 'https://myserver:6443' }, color: 'service-k3s', description: '轻量级 K8s' },
+  { type: 'docker-dind', category: 'devtools', label: 'Docker (Dind)', icon: 'Container', defaultImage: 'docker:dind', defaultPorts: ['2375:2375'], defaultEnv: {}, color: 'service-dind', description: 'Docker-in-Docker', privileged: true },
 ];
 
 export interface ArchitectureTemplate {

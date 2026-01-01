@@ -4,7 +4,7 @@ import {
   Bot, MessageSquare, Layers, FileDigit, Send, Wifi,
   Navigation, ShieldAlert, RefreshCw, Activity, PieChart, Search,
   Compass, Key, Wrench, GitBranch, HardDrive, Mail, Box,
-  Code2, Boxes, Shield
+  Code2, Boxes, Shield, Container, Ship
 } from 'lucide-react';
 import { SERVICE_TEMPLATES, ServiceType, ARCHITECTURE_TEMPLATES, ArchitectureTemplate, CATEGORIES, ServiceCategory } from '@/types/docker';
 import { cn } from '@/lib/utils';
@@ -17,7 +17,7 @@ const iconMap: Record<string, React.ElementType> = {
   Zap, Bot, MessageSquare, Layers, FileDigit, Send, Wifi,
   Navigation, ShieldAlert, Globe, RefreshCw, Activity, PieChart, Search,
   Layout, Compass, Key, Wrench, GitBranch, HardDrive, Mail, Box,
-  Code2, Boxes, Shield, Rocket
+  Code2, Boxes, Shield, Rocket, Container, ShipWheel: Ship
 };
 
 const categoryIconMap: Record<ServiceCategory, React.ElementType> = {

@@ -15,6 +15,7 @@ interface DockerComposeService {
   command?: string | string[];
   healthcheck?: HealthcheckConfig;
   networks?: string[];
+  privileged?: boolean;
 }
 
 interface DockerCompose {
@@ -127,6 +128,11 @@ export function useDockerCompose() {
       if (config.networks && config.networks.length > 0) {
         service.networks = config.networks;
         config.networks.forEach(n => usedNetworks.add(n));
+      }
+
+      // Privileged mode (for Docker-in-Docker, etc.)
+      if (config.privileged) {
+        service.privileged = true;
       }
 
       // Dependencies with conditions

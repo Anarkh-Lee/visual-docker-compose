@@ -24,7 +24,7 @@
 | ☁️ 微服务组件 | Nacos, Sentinel, Gateway, Seata |
 | 📊 监控与日志 | Prometheus, Grafana, Elasticsearch, Kibana, Zipkin |
 | 🔐 安全与网关 | Nginx, Traefik, Keycloak |
-| 🛠️ 开发工具 | Jenkins, GitLab Runner, MinIO, Mailhog, Portainer |
+| 🛠️ 开发工具 | Jenkins, GitLab Runner, MinIO, Mailhog, Portainer, **K3s (轻量级 K8s)**, **Docker Dind** |
 
 ### ⚡ 快速模板
 一键生成常用架构：

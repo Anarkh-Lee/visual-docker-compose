@@ -114,6 +114,7 @@ export default function Index() {
           environment: { ...template.defaultEnv },
           volumes: [],
           dependsOn: [],
+          privileged: template.privileged,
         },
       };
 
@@ -240,6 +241,7 @@ export default function Index() {
           environment: { ...serviceTemplate.defaultEnv, ...svc.overrides?.defaultEnv },
           volumes: [],
           dependsOn: [],
+          privileged: serviceTemplate.privileged,
         },
       };
       newNodes.push(node);
