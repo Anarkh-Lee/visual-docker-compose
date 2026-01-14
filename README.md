@@ -120,6 +120,7 @@ npm run build
 - **样式方案**：Tailwind CSS
 - **流程图引擎**：React Flow
 - **YAML 处理**：js-yaml
+- **数据分析**：Google Analytics 4
 
 ## 📁 项目结构
 
@@ -136,11 +137,70 @@ src/
 ├── hooks/
 │   ├── useDockerCompose.ts # Docker Compose 生成逻辑
 │   └── useEnvVariables.ts  # 环境变量管理逻辑
+├── lib/
+│   ├── analytics.ts        # Google Analytics 4 集成
+│   └── utils.ts            # 工具函数
 ├── types/
 │   └── docker.ts           # 类型定义与服务模板
 └── pages/
     └── Index.tsx           # 主页面
 ```
+
+## 📊 使用统计与分析
+
+本项目已集成 **Google Analytics 4 (GA4)**，用于收集匿名使用数据以改进产品体验。
+
+### 跟踪的数据
+- 页面浏览量
+- 服务添加/删除操作
+- YAML 导入/导出操作
+- 模板使用情况
+- 节点复制和连接创建
+
+### 关键功能事件跟踪
+
+已在以下位置添加事件跟踪：
+
+| 功能 | 文件 | 事件名称 |
+|------|------|---------|
+| 添加服务 | Index.tsx | `Canvas > Add Service` |
+| 删除服务 | Index.tsx | `Canvas > Remove Service` |
+| 复制节点 | Index.tsx | `Canvas > Duplicate Node` |
+| 创建连接 | Index.tsx | `Canvas > Create Connection` |
+| 清空画布 | Index.tsx | `Canvas > Clear All` |
+| 导出 YAML | useDockerCompose.ts | `Export > Download YAML` |
+| 复制 YAML | useDockerCompose.ts | `Export > Copy YAML` |
+| 导入 YAML | Index.tsx | `Import > Import YAML` |
+| 使用模板 | Index.tsx | `Template > Use Template` |
+
+### 配置 GA4（开发者）
+
+1. **获取 GA4 衡量 ID**
+   - 访问 [Google Analytics](https://analytics.google.com/)
+   - 创建账号和属性，获取 `G-XXXXXXXXXX` 格式的衡量 ID
+
+2. **设置环境变量**
+   ```bash
+   # 复制环境变量模板
+   cp .env.example .env
+   
+   # 编辑 .env 文件，填入你的 GA4 ID
+   VITE_GA_MEASUREMENT_ID=G-你的衡量ID
+   ```
+
+3. **验证集成**
+   ```bash
+   # 构建生产版本
+   npm run build
+   npm run preview
+   
+   # 访问预览地址，然后在 GA4 控制台查看实时数据
+   ```
+
+### 隐私说明
+- GA4 仅在**生产环境**启用（开发环境不收集数据）
+- 不收集个人身份信息
+- 所有数据用于改进产品功能
 
 ## 🤝 贡献指南
 
