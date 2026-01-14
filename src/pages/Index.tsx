@@ -18,6 +18,7 @@ import { useDockerCompose } from '@/hooks/useDockerCompose';
 import { useEnvVariables } from '@/hooks/useEnvVariables';
 import { ServiceConfig, ServiceType, SERVICE_TEMPLATES, ArchitectureTemplate, ARCHITECTURE_TEMPLATES } from '@/types/docker';
 import { Container, Github, Trash2, ChevronDown, Rocket, Bot, Search, Copy, Edit, FileText } from 'lucide-react';
+import { trackDockerEvent } from '@/lib/analytics';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -72,6 +73,11 @@ export default function Index() {
   const onConnect = useCallback(
     (connection: Connection) => {
       setEdges((eds) => addEdge({ ...connection, animated: true }, eds));
+      
+      // 跟踪创建连接事件
+      if (import.meta.env.PROD) {
+        trackDockerEvent.createConnection();
+      }
     },
     [setEdges]
   );
@@ -118,6 +124,11 @@ export default function Index() {
         },
       };
 
+      // 跟踪添加服务事件
+      if (import.meta.env.PROD) {
+        trackDockerEvent.addService(template.label);
+      }
+
       setNodes((nds) => [...nds, newNode]);
       setSelectedNodeId(id);
     },
@@ -134,6 +145,9 @@ export default function Index() {
   }, []);
 
   const handleDeleteNode = useCallback((nodeId: string) => {
+    const node = nodes.find((n) => n.id === nodeId);
+    const serviceName = node?.data?.name || 'Unknown';
+    
     setNodes((nds) => nds.filter((n) => n.id !== nodeId));
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
     if (selectedNodeId === nodeId) {
@@ -141,7 +155,12 @@ export default function Index() {
     }
     setNodeMenu({ node: null, x: 0, y: 0 });
     toast.success('节点已删除');
-  }, [setNodes, setEdges, selectedNodeId]);
+    
+    // 跟踪删除节点事件
+    if (import.meta.env.PROD) {
+      trackDockerEvent.removeService(serviceName);
+    }
+  }, [setNodes, setEdges, selectedNodeId, nodes]);
 
   const handleDeleteEdge = useCallback((edgeId: string) => {
     setEdges((eds) => eds.filter((e) => e.id !== edgeId));
@@ -174,6 +193,11 @@ export default function Index() {
     setNodeMenu({ node: null, x: 0, y: 0 });
     setSelectedNodeId(id);
     toast.success('节点已复制');
+    
+    // 跟踪复制节点事件
+    if (import.meta.env.PROD) {
+      trackDockerEvent.duplicateNode(sourceData.name);
+    }
   }, [nodeMenu.node, setNodes]);
 
   const handleEditNode = useCallback(() => {
@@ -218,6 +242,11 @@ export default function Index() {
     setNodes([]);
     setEdges([]);
     nodeId = 0;
+    
+    // 跟踪使用模板事件
+    if (import.meta.env.PROD) {
+      trackDockerEvent.useTemplate(template.name);
+    }
     
     const newNodes: Node<ServiceConfig>[] = [];
     const newEdges: Edge[] = [];
@@ -273,6 +302,11 @@ export default function Index() {
     setSelectedNodeId(null);
     nodeId = 0;
     toast.success('画布已清空');
+    
+    // 跟踪清空画布事件
+    if (import.meta.env.PROD) {
+      trackDockerEvent.clearCanvas();
+    }
   }, [setNodes, setEdges]);
 
   const handleImportYaml = useCallback((yamlContent: string) => {
@@ -293,6 +327,11 @@ export default function Index() {
     toast.success('导入成功', {
       description: `已导入 ${result.nodes.length} 个服务和 ${result.edges.length} 个依赖关系`,
     });
+    
+    // 跟踪导入 YAML 事件
+    if (import.meta.env.PROD) {
+      trackDockerEvent.importYaml();
+    }
   }, [parseYaml, setNodes, setEdges]);
 
   return (

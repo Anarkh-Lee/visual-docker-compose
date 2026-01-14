@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { Node, Edge } from 'reactflow';
 import yaml from 'js-yaml';
 import { ServiceConfig, ServiceType, SERVICE_TEMPLATES, BuildConfig, HealthcheckConfig, DependsOnConfig } from '@/types/docker';
+import { trackDockerEvent } from '@/lib/analytics';
 
 interface DockerComposeService {
   image?: string;
@@ -457,11 +458,22 @@ export function useDockerCompose() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    
+    // 跟踪导出事件
+    if (import.meta.env.PROD) {
+      trackDockerEvent.exportYaml();
+    }
   }, []);
 
   const copyToClipboard = useCallback(async (text: string): Promise<boolean> => {
     try {
       await navigator.clipboard.writeText(text);
+      
+      // 跟踪复制事件
+      if (import.meta.env.PROD) {
+        trackDockerEvent.copyYaml();
+      }
+      
       return true;
     } catch (error) {
       console.error('Copy failed:', error);

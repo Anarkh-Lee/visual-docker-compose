@@ -15,6 +15,7 @@ import 'reactflow/dist/style.css';
 import ServiceNode from './ServiceNode';
 import { EdgeContextMenu } from './ContextMenu';
 import { ServiceConfig, SERVICE_TEMPLATES } from '@/types/docker';
+import { trackDockerEvent } from '@/lib/analytics';
 
 const nodeTypes: NodeTypes = {
   service: ServiceNode,
