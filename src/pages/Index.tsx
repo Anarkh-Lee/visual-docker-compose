@@ -505,6 +505,23 @@ export default function Index() {
         toEnvText={toEnvText}
         onDownloadEnv={downloadEnv}
       />
+
+      {/* Footer with Busuanzi Stats */}
+      <footer className="h-8 border-t border-border bg-card/80 backdrop-blur-sm flex items-center justify-center px-4 shrink-0">
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <span>本站总访问量</span>
+            <span id="busuanzi_value_site_pv" className="font-mono text-primary">-</span>
+            <span>次</span>
+          </span>
+          <span className="text-border">|</span>
+          <span className="flex items-center gap-1">
+            <span>访客数</span>
+            <span id="busuanzi_value_site_uv" className="font-mono text-primary">-</span>
+            <span>人</span>
+          </span>
+        </div>
+      </footer>
     </div>
   );
 }
